@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sweet Tally</title>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1c1033;--card:#2a1a4a;--ink:#f7f1ff;--mute:#a998cf;--pink:#ff5fa2;--lemon:#ffe44d;--mint:#4de8c2;--r:22px;
+--display:'Bagel Fat One','Arial Rounded MT Bold','Trebuchet MS',sans-serif;--body:'DM Sans',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--body);min-height:100%}
+body{max-width:480px;margin:0 auto;padding:env(safe-area-inset-top) 18px calc(96px + env(safe-area-inset-bottom))}
+h1{font:400 28px var(--display);color:var(--pink);padding:18px 0 6px;letter-spacing:.5px}
+h2{font:400 22px var(--display);margin:18px 0 10px}
+.card{background:var(--card);border-radius:var(--r);padding:18px;margin-bottom:14px}
+.ring{position:relative;width:230px;height:230px;margin:6px auto 14px}
+.ring svg{transform:rotate(-90deg)}
+.ring .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.big{font:400 58px/1 var(--display);color:var(--lemon)}
+.big.over{color:var(--pink)}
+.sub{color:var(--mute);font-size:14px;margin-top:4px}
+.bar{margin:12px 0}
+.bar .row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px}
+.track{height:12px;border-radius:99px;background:#3c2863;overflow:hidden}
+.fill{height:100%;border-radius:99px;transition:width .5s}
+.item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px dashed #4a3577}
+.item:last-child{border:0}
+.item b{display:block;font-weight:700}
+.item small{color:var(--mute)}
+button,.btn{font:700 16px var(--body);border:0;border-radius:99px;padding:14px 20px;background:var(--pink);color:#2b0a1b;cursor:pointer;width:100%}
+button.alt{background:#3c2863;color:var(--ink)}
+button.x{width:auto;padding:6px 12px;background:#3c2863;color:var(--mute);font-size:14px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--lemon);outline-offset:2px}
+label{display:block;font-size:14px;color:var(--mute);margin:12px 0 5px}
+input,select{width:100%;font:500 17px var(--body);padding:13px 14px;border-radius:14px;border:2px solid #4a3577;background:#1c1033;color:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;padding:10px 18px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 35%)}
+nav div{display:flex;gap:6px;background:var(--card);padding:6px;border-radius:99px;width:100%;max-width:444px}
+nav button{background:transparent;color:var(--mute);padding:12px 6px;flex:1}
+nav button.on{background:var(--lemon);color:#2b2300}
+.view{display:none}.view.on{display:block}
+video{width:100%;border-radius:var(--r);background:#000;aspect-ratio:4/3;object-fit:cover}
+.msg{color:var(--mute);font-size:14px;margin:8px 0}
+.err{color:var(--pink)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{background:#1c1033;color:var(--mute);border:2px solid #4a3577;padding:12px 4px}
+.seg button.on{background:var(--mint);color:#06332a;border-color:var(--mint)}
+@media (prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+</head>
+<body>
+<h1>Sweet Tally</h1>
+
+<section id="v-today" class="view on">
+  <div class="card">
+    <div class="ring">
+      <svg width="230" height="230" viewBox="0 0 200 200"><circle cx="100" cy="100" r="80" fill="none" stroke="#3c2863" stroke-width="22"/><circle id="arc" cx="100" cy="100" r="80" fill="none" stroke="#ffe44d" stroke-width="22" stroke-linecap="round" stroke-dasharray="502.65" stroke-dashoffset="502.65" style="transition:stroke-dashoffset .6s"/></svg>
+      <div class="mid"><div class="big" id="left">0</div><div class="sub" id="leftLbl">kcal left</div></div>
+    </div>
+    <div class="bar"><div class="row"><span>Protein</span><span id="tp"></span></div><div class="track"><div class="fill" id="fp" style="background:var(--pink)"></div></div></div>
+    <div class="bar"><div class="row"><span>Carbs</span><span id="tc"></span></div><div class="track"><div class="fill" id="fc" style="background:var(--lemon)"></div></div></div>
+    <div class="bar"><div class="row"><span>Fat</span><span id="tf"></span></div><div class="track"><div class="fill" id="ff" style="background:var(--mint)"></div></div></div>
+  </div>
+  <h2>Eaten today</h2>
+  <div class="card" id="log"></div>
+</section>
+
+<section id="v-scan" class="view">
+  <h2>Scan a barcode</h2>
+  <video id="vid" playsinline muted hidden></video>
+  <div class="msg" id="scanMsg">Point the camera at the barcode on the wrapper.</div>
+  <button id="startScan">Open camera</button>
+  <label for="code">Or type the barcode numbers</label>
+  <div class="two" style="grid-template-columns:1fr auto"><input id="code" inputmode="numeric" placeholder="e.g. 5000159407236"><button class="alt" id="lookup" style="width:auto">Find</button></div>
+  <div class="card" id="found" hidden style="margin-top:16px"></div>
+  <h2>No barcode? Add by hand</h2>
+  <div class="card">
+    <label for="mn">Name</label><input id="mn" placeholder="Gummy bears">
+    <div class="two"><div><label for="mk">kcal</label><input id="mk" type="number" inputmode="decimal"></div><div><label for="mpp">Protein g</label><input id="mpp" type="number" inputmode="decimal"></div></div>
+    <div class="two"><div><label for="mc">Carbs g</label><input id="mc" type="number" inputmode="decimal"></div><div><label for="mf">Fat g</label><input id="mf" type="number" inputmode="decimal"></div></div>
+    <div style="height:14px"></div><button id="addManual">Add to today</button>
+  </div>
+</section>
+
+<section id="v-me" class="view">
+  <h2>Your stats</h2>
+  <div class="card">
+    <label>Sex</label>
+    <div class="seg" style="grid-template-columns:1fr 1fr" id="sex"><button data-v="m">Male</button><button data-v="f">Female</button></div>
+    <div class="two"><div><label for="age">Age</label><input id="age" type="number" inputmode="numeric"></div><div><label for="h">Height (cm)</label><input id="h" type="number" inputmode="decimal"></div></div>
+    <div class="two"><div><label for="w">Weight (kg)</label><input id="w" type="number" inputmode="decimal"></div><div><label for="act">Activity</label>
+      <select id="act"><option value="1.2">Desk, no gym</option><option value="1.375">Gym 1-3x/wk</option><option value="1.55" selected>Gym 3-5x/wk</option><option value="1.725">Gym 6-7x/wk</option></select></div></div>
+    <label>Goal</label>
+    <div class="seg" id="goal"><button data-v="cut">Cut</button><button data-v="keep">Maintain</button><button data-v="bulk">Bulk</button></div>
+    <div style="height:16px"></div><button id="save">Calculate my targets</button>
+  </div>
+  <div class="card" id="res" hidden></div>
+</section>
+
+<nav><div><button data-t="today" class="on">Today</button><button data-t="scan">Scan</button><button data-t="me">Me</button></div></nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const KEY='sweet-tally-v1', today=()=>new Date().toISOString().slice(0,10);
+let S={profile:{sex:'m',goal:'cut'},targets:null,logs:{}};
+try{S=Object.assign(S,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const r=n=>Math.round(n||0);
+
+// tabs
+$$('nav button').forEach(b=>b.onclick=()=>{$$('nav button').forEach(x=>x.classList.toggle('on',x===b));$$('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+b.dataset.t));if(b.dataset.t!=='scan')stopCam();});
+const go=t=>$(`nav button[data-t=${t}]`).click();
+
+// segmented buttons
+function seg(id,key){const box=$(id);const paint=()=>$$(id+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.profile[key]));
+  box.onclick=e=>{const b=e.target.closest('button');if(!b)return;S.profile[key]=b.dataset.v;paint()};paint();}
+seg('#sex','sex');seg('#goal','goal');
+
+// targets
+function calc(p){
+  const bmr=10*p.w+6.25*p.h-5*p.age+(p.sex==='m'?5:-161);
+  const tdee=bmr*p.act;
+  const kcal=tdee+(p.goal==='cut'?-500:p.goal==='bulk'?300:0);
+  const prot=2*p.w, fat=0.8*p.w, carb=Math.max(0,(kcal-prot*4-fat*9)/4);
+  return {bmr:r(bmr),tdee:r(tdee),kcal:r(kcal),p:r(prot),c:r(carb),f:r(fat)};
+}
+$('#save').onclick=()=>{
+  const p=S.profile; p.age=+$('#age').value;p.h=+$('#h').value;p.w=+$('#w').value;p.act=+$('#act').value;
+  if(!p.age||!p.h||!p.w){$('#res').hidden=false;$('#res').innerHTML='<span class="err">Fill in age, height and weight first.</span>';return}
+  S.targets=calc(p);save();showRes();render();
+};
+function showRes(){const t=S.targets;if(!t)return;$('#res').hidden=false;
+  $('#res').innerHTML=`<h2 style="margin-top:0">Daily targets</h2><div class="item"><span>Calories</span><b>${t.kcal} kcal</b></div><div class="item"><span>Protein</span><b>${t.p} g</b></div><div class="item"><span>Carbs</span><b>${t.c} g</b></div><div class="item"><span>Fat</span><b>${t.f} g</b></div><div class="msg">Burn at rest: ${t.bmr} kcal. Burn with activity: ${t.tdee} kcal.</div><button id="goToday" style="margin-top:8px">Start tracking</button>`;
+  $('#goToday').onclick=()=>go('today');}
+(function fill(){const p=S.profile;if(p.age)$('#age').value=p.age;if(p.h)$('#h').value=p.h;if(p.w)$('#w').value=p.w;if(p.act)$('#act').value=p.act;showRes();})();
+
+// today
+const items=()=>S.logs[today()]||(S.logs[today()]=[]);
+function render(){
+  const t=S.targets||{kcal:2000,p:150,c:200,f:60}; const L=items();
+  const sum=L.reduce((a,i)=>({k:a.k+i.k,p:a.p+i.p,c:a.c+i.c,f:a.f+i.f}),{k:0,p:0,c:0,f:0});
+  const left=t.kcal-sum.k;
+  $('#left').textContent=Math.abs(r(left));$('#left').classList.toggle('over',left<0);
+  $('#leftLbl').textContent=left<0?'kcal over':'kcal left';
+  $('#arc').style.strokeDashoffset=502.65*(1-Math.min(sum.k/t.kcal,1));
+  $('#arc').style.stroke=left<0?'#ff5fa2':'#ffe44d';
+  [['p','p'],['c','c'],['f','f']].forEach(([a,b])=>{$('#t'+a).textContent=`${r(sum[b])} / ${t[b]} g`;$('#f'+a).style.width=Math.min(100,sum[b]/t[b]*100)+'%'});
+  $('#log').innerHTML=L.length?L.map((i,n)=>`<div class="item"><div><b>${esc(i.name)}</b><small>${r(i.k)} kcal · P ${r(i.p)} · C ${r(i.c)} · F ${r(i.f)}</small></div><button class="x" data-d="${n}" aria-label="Remove ${esc(i.name)}">Remove</button></div>`).join(''):'<div class="msg">Nothing yet. Tap Scan to add your first snack.</div>';
+  save();
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+$('#log').onclick=e=>{const b=e.target.closest('[data-d]');if(!b)return;items().splice(+b.dataset.d,1);render()};
+function add(it){items().push(it);render();go('today')}
+
+// manual
+$('#addManual').onclick=()=>{const k=+$('#mk').value;if(!k&&k!==0||$('#mk').value===''){return}
+  add({name:$('#mn').value||'Snack',k,p:+$('#mpp').value||0,c:+$('#mc').value||0,f:+$('#mf').value||0});
+  ['#mn','#mk','#mpp','#mc','#mf'].forEach(s=>$(s).value='')};
+
+// lookup
+async function lookup(code){
+  code=String(code).replace(/\D/g,''); if(!code)return;
+  const box=$('#found');box.hidden=false;box.innerHTML='<div class="msg">Looking up '+code+'…</div>';
+  try{
+    const res=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,serving_quantity`);
+    const d=await res.json();
+    if(d.status!==1)throw 0;
+    const pr=d.product,n=pr.nutriments||{};
+    const per={k:n['energy-kcal_100g']??(n['energy_100g']?n['energy_100g']/4.184:0),p:n.proteins_100g||0,c:n.carbohydrates_100g||0,f:n.fat_100g||0};
+    const name=[pr.brands&&pr.brands.split(',')[0],pr.product_name].filter(Boolean).join(' ')||code;
+    const g0=+pr.serving_quantity||100;
+    box.innerHTML=`<h2 style="margin-top:0">${esc(name)}</h2><div class="msg">Per 100 g: ${r(per.k)} kcal · P ${r(per.p)} · C ${r(per.c)} · F ${r(per.f)}</div><label for="grams">How many grams did you eat?</label><input id="grams" type="number" inputmode="decimal" value="${g0}"><div class="item" id="calc"></div><button id="addScan">Add to today</button>`;
+    const upd=()=>{const g=+$('#grams').value||0,m=g/100;$('#calc').innerHTML=`<span>${r(per.k*m)} kcal</span><small>P ${r(per.p*m)} · C ${r(per.c*m)} · F ${r(per.f*m)}</small>`};
+    $('#grams').oninput=upd;upd();
+    $('#addScan').onclick=()=>{const m=(+$('#grams').value||0)/100;add({name,k:per.k*m,p:per.p*m,c:per.c*m,f:per.f*m});box.hidden=true;$('#code').value=''};
+  }catch(e){box.innerHTML='<div class="err">Not found, or no internet. Type the numbers again or add it by hand below.</div>'}
+}
+$('#lookup').onclick=()=>lookup($('#code').value);
+
+// camera
+let stream=null,loop=null,zx=null;
+function stopCam(){clearInterval(loop);loop=null;if(zx){try{zx.reset()}catch(e){}zx=null}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('#vid').hidden=true;$('#startScan').textContent='Open camera'}
+$('#startScan').onclick=async()=>{
+  if(stream||zx){stopCam();return}
+  const v=$('#vid');v.hidden=false;$('#scanMsg').textContent='Hold steady, barcode inside the frame.';$('#scanMsg').className='msg';
+  const done=c=>{stopCam();$('#code').value=c;lookup(c)};
+  try{
+    if('BarcodeDetector' in window){
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      v.srcObject=stream;await v.play();
+      const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']});
+      loop=setInterval(async()=>{try{const b=await det.detect(v);if(b.length)done(b[0].rawValue)}catch(e){}},300);
+    }else if(window.ZXing){
+      zx=new ZXing.BrowserMultiFormatReader();
+      await zx.decodeFromVideoDevice(null,v,(res)=>{if(res)done(res.getText())});
+    }else throw 0;
+    $('#startScan').textContent='Close camera';
+  }catch(e){stopCam();$('#scanMsg').textContent='Camera blocked. Allow camera access, or type the barcode numbers below.';$('#scanMsg').className='msg err'}
+};
+
+render();
+</script>
+</body>
+</html>
